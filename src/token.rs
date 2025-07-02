@@ -2,6 +2,8 @@
 pub enum Token {
     Ident(String),
     Integer(String),
+    True,
+    False,
     Illegal,
     Eof,
     Equal,
@@ -14,5 +16,16 @@ pub enum Token {
     RBrace,
     Function,
     Let,
+    Assign,
+    Bang,
+    Dash,
+    ForwardSlash,
+    Asterisk,
+    NotEqual,
+    LessThan,
+    GreaterThan,
+    Return,
+    If,
+    Else,
 }
 
