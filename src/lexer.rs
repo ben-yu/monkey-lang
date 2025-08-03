@@ -66,7 +66,7 @@ impl Lexer {
         return ch.is_ascii_alphabetic() || ch == b'_';
     }
 
-    pub fn next_token(&mut self) -> Result<Token> {
+    pub fn next_token(&mut self) -> Token {
 
         self.skip_whitespace();
 
@@ -103,7 +103,7 @@ impl Lexer {
             c => {
                 if Self::is_letter(c) {
                     let id = self.read_identifier();
-                    return Ok(match id.as_str() {
+                    return match id.as_str() {
                         "fn" => Token::Function,
                         "let" => Token::Let,
                         "true" => Token::True,
@@ -112,10 +112,10 @@ impl Lexer {
                         "else" => Token::Else,
                         "return" => Token::Return,
                         _ => Token::Ident(id),
-                    });
+                    };
                 } else if c.is_ascii_digit() {
                     let id = self.read_number();
-                    return Ok(Token::Integer(id));
+                    return Token::Integer(id);
                 } else {
                     Token::Illegal
                 }
@@ -123,7 +123,7 @@ impl Lexer {
         };
 
         self.read_char();
-        return Ok(tok);
+        return tok;
     }
 }
 
@@ -149,8 +149,8 @@ mod tests {
         ];
 
         for token in tokens {
-            let next_token = lexer.next_token()?;
-            println!("expected: {:?}, received {:?}", token, next_token);
+            let next_token = lexer.next_token();
+            println!("expected: {}, received {}", token, next_token);
             assert_eq!(token, next_token);
         }
 
@@ -253,8 +253,8 @@ mod tests {
         ];
 
         for token in expected {
-            let next_token = lexer.next_token()?;
-            println!("expected: {:?}, received {:?}", token, next_token);
+            let next_token = lexer.next_token();
+            println!("expected: {}, received {}", token, next_token);
             assert_eq!(token, next_token);
         }
         return Ok(());

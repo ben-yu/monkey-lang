@@ -10,7 +10,8 @@ pub fn start() {
         if let Ok(line) = line {
             let mut tokenizer = Lexer::new(line);
 
-            while let Ok(token) = tokenizer.next_token() {
+            loop {
+                let token = tokenizer.next_token();
                 println!("{} ", token);
                 if let Token::Eof = token {
                     break;
