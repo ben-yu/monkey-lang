@@ -50,6 +50,7 @@ impl Parser {
     fn parse_statement(&mut self) -> Result<Statement, ParserError> {
         match self.current_token {
             Token::Let => self.parse_let_statement(),
+            Token::Return => self.parse_return_statement(),
             _ => Err(ParserError::new(format!("statement not supported yet"))),
         }
     }
@@ -79,6 +80,21 @@ impl Parser {
         self.next_token();
 
         Ok(Statement::Let(ident))
+    }
+
+    fn parse_return_statement(&mut self) -> Result<Statement, ParserError> {
+        self.next_token();
+
+        // skip expressions for now
+
+        while !self.peek_token_is(&Token::Semicolon) {
+            self.next_token();
+        }
+
+        // consume the semicolon
+        self.next_token();
+
+        Ok(Statement::Return)
     }
 
     fn current_token_is(&self, token: &Token) -> bool {
@@ -147,9 +163,20 @@ mod tests {
     #[test]
     fn test_let_statement() {
         let test_case = [
-            ("let x = 5;", "let x;"),
-            ("let y = true;", "let y;"),
-            ("let foobar = 124214;", "let foobar;"),
+            ("let x = 5;", "let x = ;"),
+            ("let y = true;", "let y = ;"),
+            ("let foobar = 124214;", "let foobar = ;"),
+        ];
+
+        apply_test(&test_case);
+    }
+
+    #[test]
+    fn test_return_statement() {
+        let test_case = [
+            ("return 5;", "return;"),
+            ("return true;", "return;"),
+            ("return foobar;", "return;"),
         ];
 
         apply_test(&test_case);

@@ -21,12 +21,15 @@ pub type Program = Vec<Statement>;
 
 pub enum Statement {
     Let(String),
+    Return,
 }
 
 impl fmt::Display for Statement {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Statement::Let(id) => write!(f, "let {};", id),
+            Statement::Let(id) => write!(f, "let {} = ;", id),
+            Statement::Return => write!(f, "return;"),
+
         }
     }
 }
