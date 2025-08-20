@@ -51,7 +51,7 @@ impl Parser {
         match self.current_token {
             Token::Let => self.parse_let_statement(),
             Token::Return => self.parse_return_statement(),
-            _ => Err(ParserError::new(format!("statement not supported yet"))),
+            _ => self.parse_expression_statement(),
         }
     }
 
@@ -95,6 +95,30 @@ impl Parser {
         self.next_token();
 
         Ok(Statement::Return)
+    }
+
+    fn parse_expression_statement(&mut self) -> Result<Statement, ParserError> {
+        let expr = self.parse_expression()?;
+
+        if self.peek_token_is(&Token::Semicolon) {
+            self.next_token();
+        }
+
+        Ok(Statement::Expr(expr))
+    }
+
+    fn parse_expression(&mut self) -> Result<Expression, ParserError> {
+        let mut left_expr = match self.current_token {
+            Token::Ident(ref id) => Ok(Expression::Ident(id.clone())),
+            _ => {
+                return Err(ParserError::new(format!(
+                    "No prefix parse function for {} is found",
+                    self.current_token
+                )));
+            }
+        };
+
+        left_expr
     }
 
     fn current_token_is(&self, token: &Token) -> bool {
@@ -178,6 +202,13 @@ mod tests {
             ("return true;", "return;"),
             ("return foobar;", "return;"),
         ];
+
+        apply_test(&test_case);
+    }
+
+    #[test]
+    fn test_identifier_expression() {
+        let test_case = [("foobar;", "foobar")];
 
         apply_test(&test_case);
     }
