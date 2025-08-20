@@ -48,12 +48,15 @@ impl Lexer {
         return String::from_utf8_lossy(&self.input[pos..self.position]).to_string();
     }
 
-    fn read_number(&mut self) -> String {
+    fn read_number(&mut self) -> i32 {
         let pos = self.position;
         while self.cur_char.is_ascii_digit() {
             self.read_char();
         }
-        return String::from_utf8_lossy(&self.input[pos..self.position]).to_string();
+        return String::from_utf8_lossy(&self.input[pos..self.position])
+            .to_string()
+            .parse::<i32>()
+            .expect("Unexpected character in sequence of numbers");
     }
 
     fn skip_whitespace(&mut self) {
@@ -178,12 +181,12 @@ mod tests {
             Token::Let,
             Token::Ident("five".to_string()),
             Token::Assign,
-            Token::Integer("5".to_string()),
+            Token::Integer(5),
             Token::Semicolon,
             Token::Let,
             Token::Ident("ten".to_string()),
             Token::Assign,
-            Token::Integer("10".to_string()),
+            Token::Integer(10),
             Token::Semicolon,
             Token::Let,
             Token::Ident("add".to_string()),
@@ -216,19 +219,19 @@ mod tests {
             Token::Dash,
             Token::ForwardSlash,
             Token::Asterisk,
-            Token::Integer("5".to_string()),
+            Token::Integer(5),
             Token::Semicolon,
-            Token::Integer("5".to_string()),
+            Token::Integer(5),
             Token::LessThan,
-            Token::Integer("10".to_string()),
+            Token::Integer(10),
             Token::GreaterThan,
-            Token::Integer("5".to_string()),
+            Token::Integer(5),
             Token::Semicolon,
             Token::If,
             Token::LParen,
-            Token::Integer("5".to_string()),
+            Token::Integer(5),
             Token::LessThan,
-            Token::Integer("10".to_string()),
+            Token::Integer(10),
             Token::RParen,
             Token::LBrace,
             Token::Return,
@@ -241,13 +244,13 @@ mod tests {
             Token::False,
             Token::Semicolon,
             Token::RBrace,
-            Token::Integer("10".to_string()),
+            Token::Integer(10),
             Token::Equal,
-            Token::Integer("10".to_string()),
+            Token::Integer(10),
             Token::Semicolon,
-            Token::Integer("10".to_string()),
+            Token::Integer(10),
             Token::NotEqual,
-            Token::Integer(String::from("9")),
+            Token::Integer(9),
             Token::Semicolon,
             Token::Eof,
         ];

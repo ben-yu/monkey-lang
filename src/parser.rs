@@ -110,6 +110,7 @@ impl Parser {
     fn parse_expression(&mut self) -> Result<Expression, ParserError> {
         let mut left_expr = match self.current_token {
             Token::Ident(ref id) => Ok(Expression::Ident(id.clone())),
+            Token::Integer(i) => Ok(Expression::Lit(Literal::Integer(i))),
             _ => {
                 return Err(ParserError::new(format!(
                     "No prefix parse function for {} is found",
@@ -209,6 +210,13 @@ mod tests {
     #[test]
     fn test_identifier_expression() {
         let test_case = [("foobar;", "foobar")];
+
+        apply_test(&test_case);
+    }
+
+    #[test]
+    fn test_integer_literal_expression() {
+        let test_case = [("5;", "5")];
 
         apply_test(&test_case);
     }

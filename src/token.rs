@@ -3,7 +3,7 @@ use std::fmt::Display;
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     Ident(String),
-    Integer(String),
+    Integer(i32),
     True,
     False,
     Illegal,

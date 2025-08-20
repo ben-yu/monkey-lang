@@ -46,12 +46,26 @@ fn format_statements(stmts: &[Statement]) -> String {
 
 pub enum Expression {
     Ident(String),
+    Lit(Literal),
 }
 
 impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Expression::Ident(id) => write!(f, "{}", id),
+            Expression::Lit(lit) => write!(f, "{}", lit),
+        }
+    }
+}
+
+pub enum Literal {
+    Integer(i32),
+}
+
+impl fmt::Display for Literal {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Literal::Integer(i) => write!(f, "{}", i),
         }
     }
 }
