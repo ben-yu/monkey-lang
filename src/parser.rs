@@ -111,6 +111,7 @@ impl Parser {
         let mut left_expr = match self.current_token {
             Token::Ident(ref id) => Ok(Expression::Ident(id.clone())),
             Token::Integer(i) => Ok(Expression::Lit(Literal::Integer(i))),
+            Token::Bang | Token::Dash => self.parse_prefix_expression(),
             _ => {
                 return Err(ParserError::new(format!(
                     "No prefix parse function for {} is found",
@@ -120,6 +121,15 @@ impl Parser {
         };
 
         left_expr
+    }
+
+    fn parse_prefix_expression(&mut self) -> Result<Expression, ParserError> {
+        let prefix = self.current_token.clone();
+        self.next_token();
+
+        let expr = self.parse_expression()?;
+
+        Ok(Expression::Prefix(prefix, Box::new(expr)))
     }
 
     fn current_token_is(&self, token: &Token) -> bool {
@@ -220,4 +230,15 @@ mod tests {
 
         apply_test(&test_case);
     }
+
+    #[test]
+    fn test_prefix_expression() {
+        let test_case = [
+            ("!5;", "(Bang 5)"),
+            ("-15", "(Dash 15)"),
+        ];
+
+        apply_test(&test_case);
+    }
+
 }
