@@ -50,6 +50,7 @@ pub enum Expression {
     Ident(String),
     Lit(Literal),
     Prefix(Token, Box<Expression>),
+    Infix(Token, Box<Expression>, Box<Expression>),
 }
 
 impl fmt::Display for Expression {
@@ -57,7 +58,8 @@ impl fmt::Display for Expression {
         match self {
             Expression::Ident(id) => write!(f, "{}", id),
             Expression::Lit(lit) => write!(f, "{}", lit),
-            Expression::Prefix(op, expr) => write!(f, "({} {})", op, expr),
+            Expression::Prefix(op, expr) => write!(f, "({}{})", op, expr),
+            Expression::Infix(op, left_expr, right_expr) => write!(f, "({} {} {})", left_expr, op, right_expr),
         }
     }
 }

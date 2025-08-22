@@ -98,7 +98,7 @@ impl Parser {
     }
 
     fn parse_expression_statement(&mut self) -> Result<Statement, ParserError> {
-        let expr = self.parse_expression()?;
+        let expr = self.parse_expression(Precedence::Lowest)?;
 
         if self.peek_token_is(&Token::Semicolon) {
             self.next_token();
@@ -107,7 +107,7 @@ impl Parser {
         Ok(Statement::Expr(expr))
     }
 
-    fn parse_expression(&mut self) -> Result<Expression, ParserError> {
+    fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, ParserError> {
         let mut left_expr = match self.current_token {
             Token::Ident(ref id) => Ok(Expression::Ident(id.clone())),
             Token::Integer(i) => Ok(Expression::Lit(Literal::Integer(i))),
@@ -120,6 +120,24 @@ impl Parser {
             }
         };
 
+        while !self.peek_token_is(&Token::Semicolon) && precedence < self.next_token_precedence() {
+            match self.peek_token {
+                Token::Plus
+                | Token::Dash
+                | Token::Asterisk
+                | Token::ForwardSlash
+                | Token::Equal
+                | Token::NotEqual
+                | Token::LessThan
+                | Token::GreaterThan => {
+                    self.next_token();
+                    let expr = left_expr.unwrap();
+                    left_expr = self.parse_infix_expression(expr);
+                }
+                _ => return left_expr,
+            }
+        }
+
         left_expr
     }
 
@@ -127,9 +145,24 @@ impl Parser {
         let prefix = self.current_token.clone();
         self.next_token();
 
-        let expr = self.parse_expression()?;
+        let expr = self.parse_expression(Precedence::Prefix)?;
 
         Ok(Expression::Prefix(prefix, Box::new(expr)))
+    }
+
+    fn parse_infix_expression(&mut self, left_expr: Expression) -> Result<Expression, ParserError> {
+        let infix_op = self.current_token.clone();
+
+        let precedence = token_to_precedence(&self.current_token);
+        self.next_token();
+
+        let right_expr = self.parse_expression(precedence)?;
+
+        Ok(Expression::Infix(
+            infix_op,
+            Box::new(left_expr),
+            Box::new(right_expr),
+        ))
     }
 
     fn current_token_is(&self, token: &Token) -> bool {
@@ -138,6 +171,10 @@ impl Parser {
 
     fn peek_token_is(&self, token: &Token) -> bool {
         self.peek_token == *token
+    }
+
+    fn next_token_precedence(&self) -> Precedence {
+        token_to_precedence(&self.peek_token)
     }
 
     fn expect_peek_token(&mut self, token: &Token) -> Result<(), ParserError> {
@@ -179,6 +216,27 @@ impl fmt::Display for ParserError {
 impl ParserError {
     pub fn new(msg: String) -> Self {
         ParserError(msg)
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
+pub enum Precedence {
+    Lowest,
+    Equals,      // == or !=
+    LessGreater, // > or <
+    Sum,         // + or -
+    Product,     // * or /
+    Prefix,
+    Call,
+}
+
+pub fn token_to_precedence(token: &Token) -> Precedence {
+    match token {
+        Token::Asterisk | Token::ForwardSlash => Precedence::Product,
+        Token::Plus | Token::Dash => Precedence::Sum,
+        Token::LessThan | Token::GreaterThan => Precedence::LessGreater,
+        Token::Equal | Token::NotEqual => Precedence::Equals,
+        _ => Precedence::Lowest,
     }
 }
 
@@ -234,11 +292,26 @@ mod tests {
     #[test]
     fn test_prefix_expression() {
         let test_case = [
-            ("!5;", "(Bang 5)"),
-            ("-15", "(Dash 15)"),
+            ("!5;", "(!5)"),
+            ("-15", "(-15)"),
         ];
 
         apply_test(&test_case);
     }
 
+    #[test]
+    fn test_parse_infix_expression() {
+        let test_case = [
+            ("5 + 5;", "(5 + 5)"),
+            ("5 - 5;", "(5 - 5)"),
+            ("5 * 5;", "(5 * 5)"),
+            ("5 / 5;", "(5 / 5)"),
+            ("5 > 5;", "(5 > 5)"),
+            ("5 < 5;", "(5 < 5)"),
+            ("5 == 5;", "(5 == 5)"),
+            ("5 != 5;", "(5 != 5)"),
+        ];
+
+        apply_test(&test_case);
+    }
 }
