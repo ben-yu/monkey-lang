@@ -114,6 +114,12 @@ impl Parser {
             Token::True => Ok(Expression::Lit(Literal::Boolean(true))),
             Token::False => Ok(Expression::Lit(Literal::Boolean(false))),
             Token::Bang | Token::Dash => self.parse_prefix_expression(),
+            Token::LParen => {
+                self.next_token();
+                let expr = self.parse_expression(Precedence::Lowest);
+                self.expect_peek_token(&Token::RParen)?;
+                expr
+            },
             _ => {
                 return Err(ParserError::new(format!(
                     "No prefix parse function for {} is found",
@@ -352,6 +358,12 @@ mod tests {
             ("false", "false"),
             ("3 > 5 == false", "((3 > 5) == false)"),
             ("3 < 5 == true", "((3 < 5) == true)"),
+            ("1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"),
+            ("(5 + 5) * 2", "((5 + 5) * 2)"),
+            ("2 / (5 + 5)", "(2 / (5 + 5))"),
+            ("(5 + 5) * 2 * (5 + 5)", "(((5 + 5) * 2) * (5 + 5))"),
+            ("-(5 + 5)", "(-(5 + 5))"),
+            ("!(true == true)", "(!(true == true))"),
         ];
         apply_test(&test_case);
     }
