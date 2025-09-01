@@ -137,6 +137,7 @@ impl Parser {
                 expr
             },
             Token::If => self.parse_if_expression(),
+            Token::Function => self.parse_fn_expression(),
             _ => {
                 return Err(ParserError::new(format!(
                     "No prefix parse function for {} is found",
@@ -215,6 +216,48 @@ impl Parser {
             consequence,
             alternative,
         ))
+    }
+
+    fn parse_fn_expression(&mut self) -> Result<Expression, ParserError> {
+        self.expect_peek_token(&Token::LParen)?;
+
+        let parameters = self.parse_fn_parameters()?;
+
+        self.expect_peek_token(&Token::LBrace)?;
+
+        let body = self.parse_block_statement()?;
+
+        Ok(Expression::Fn(parameters, body))
+    }
+
+    fn parse_fn_parameters(&mut self) -> Result<Vec<String>, ParserError> {
+        let mut identifiers = Vec::new();
+
+        // No params
+        if self.peek_token_is(&Token::RParen) {
+            self.next_token();
+            return Ok(identifiers);
+        }
+
+        self.next_token();
+
+        match &self.current_token {
+            Token::Ident(id) => identifiers.push(id.clone()),
+            token => return Err(self.error_no_identifier(token)),
+        }
+
+        while self.peek_token_is(&Token::Comma) {
+            self.next_token();
+            self.next_token();
+            match &self.current_token {
+                Token::Ident(id) => identifiers.push(id.clone()),
+                token => return Err(self.error_no_identifier(token)),
+            }
+        }
+
+        self.expect_peek_token(&Token::RParen)?;
+
+        Ok(identifiers)
     }
 
     fn current_token_is(&self, token: &Token) -> bool {
@@ -421,6 +464,16 @@ mod tests {
     #[test]
     fn test_if_else_expression() {
         let test_case = [("if (x < y) { x } else { y }", "if (x < y) { x } else { y }")];
+        apply_test(&test_case);
+    }
+
+    #[test]
+    fn test_function_expression() {
+        let test_case = [
+            ("fn() {};", "fn() {...}"),
+            ("fn(x) {};", "fn(x) {...}"),
+            ("fn(x, y, z) {};", "fn(x, y, z) {...}"),
+        ];
         apply_test(&test_case);
     }
 }
