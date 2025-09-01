@@ -45,12 +45,15 @@ fn format_statements(stmts: &[Statement]) -> String {
         .join("")
 }
 
+pub type BlockStatement = Vec<Statement>;
 
 pub enum Expression {
     Ident(String),
     Lit(Literal),
     Prefix(Token, Box<Expression>),
     Infix(Token, Box<Expression>, Box<Expression>),
+    If(Box<Expression>, BlockStatement, Option<BlockStatement>),
+
 }
 
 impl fmt::Display for Expression {
@@ -60,6 +63,19 @@ impl fmt::Display for Expression {
             Expression::Lit(lit) => write!(f, "{}", lit),
             Expression::Prefix(op, expr) => write!(f, "({}{})", op, expr),
             Expression::Infix(op, left_expr, right_expr) => write!(f, "({} {} {})", left_expr, op, right_expr),
+            Expression::If(cond, true_block, else_block) => {
+                if let Some(else_block) = else_block {
+                    write!(
+                        f,
+                        "if {} {{ {} }} else {{ {} }}",
+                        cond,
+                        format_statements(true_block),
+                        format_statements(else_block)
+                    )
+                } else {
+                    write!(f, "if {} {{ {} }}", cond, format_statements(true_block))
+                }
+            }
         }
     }
 }

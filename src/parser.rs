@@ -55,6 +55,22 @@ impl Parser {
         }
     }
 
+    fn parse_block_statement(&mut self) -> Result<BlockStatement, ParserError> {
+        self.next_token();
+
+        let mut block_statement = Vec::new();
+
+        while !self.current_token_is(&Token::RBrace) && !self.current_token_is(&Token::Eof) {
+            if let Ok(stmt) = self.parse_statement() {
+                block_statement.push(stmt);
+            }
+
+            self.next_token();
+        }
+
+        Ok(block_statement)
+    }
+
     fn parse_let_statement(&mut self) -> Result<Statement, ParserError> {
         let ident = match &self.peek_token {
             Token::Ident(id) => id.clone(),
@@ -120,6 +136,7 @@ impl Parser {
                 self.expect_peek_token(&Token::RParen)?;
                 expr
             },
+            Token::If => self.parse_if_expression(),
             _ => {
                 return Err(ParserError::new(format!(
                     "No prefix parse function for {} is found",
@@ -170,6 +187,33 @@ impl Parser {
             infix_op,
             Box::new(left_expr),
             Box::new(right_expr),
+        ))
+    }
+
+    fn parse_if_expression(&mut self) -> Result<Expression, ParserError> {
+        self.expect_peek_token(&Token::LParen)?;
+        self.next_token();
+
+        let condition = self.parse_expression(Precedence::Lowest)?;
+
+        self.expect_peek_token(&Token::RParen)?;
+        self.expect_peek_token(&Token::LBrace)?;
+
+        let consequence = self.parse_block_statement()?;
+
+        let alternative = if self.peek_token_is(&Token::Else) {
+            self.next_token();
+
+            self.expect_peek_token(&Token::LBrace)?;
+            Some(self.parse_block_statement()?)
+        } else {
+            None
+        };
+
+        Ok(Expression::If(
+            Box::new(condition),
+            consequence,
+            alternative,
         ))
     }
 
@@ -365,6 +409,18 @@ mod tests {
             ("-(5 + 5)", "(-(5 + 5))"),
             ("!(true == true)", "(!(true == true))"),
         ];
+        apply_test(&test_case);
+    }
+
+    #[test]
+    fn test_if_expression() {
+        let test_case = [("if (x < y) { x }", "if (x < y) { x }")];
+        apply_test(&test_case);
+    }
+
+    #[test]
+    fn test_if_else_expression() {
+        let test_case = [("if (x < y) { x } else { y }", "if (x < y) { x } else { y }")];
         apply_test(&test_case);
     }
 }
