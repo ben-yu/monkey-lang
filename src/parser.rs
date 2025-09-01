@@ -78,39 +78,31 @@ impl Parser {
                 return Err(self.error_no_identifier(t));
             }
         };
-
         // Consume identifier
         self.next_token();
 
         self.expect_peek_token(&Token::Assign)?;
-
         self.next_token();
 
-        // skip expressions for now
+        let expr = self.parse_expression(Precedence::Lowest)?;
 
-        while !self.peek_token_is(&Token::Semicolon) {
+        if self.peek_token_is(&Token::Semicolon) {
             self.next_token();
         }
 
-        // consume the semicolon
-        self.next_token();
-
-        Ok(Statement::Let(ident))
+        Ok(Statement::Let(ident, expr))
     }
 
     fn parse_return_statement(&mut self) -> Result<Statement, ParserError> {
         self.next_token();
 
-        // skip expressions for now
+        let expr = self.parse_expression(Precedence::Lowest)?;
 
-        while !self.peek_token_is(&Token::Semicolon) {
+        if self.peek_token_is(&Token::Semicolon) {
             self.next_token();
         }
 
-        // consume the semicolon
-        self.next_token();
-
-        Ok(Statement::Return)
+        Ok(Statement::Return(expr))
     }
 
     fn parse_expression_statement(&mut self) -> Result<Statement, ParserError> {
@@ -385,9 +377,9 @@ mod tests {
     #[test]
     fn test_let_statement() {
         let test_case = [
-            ("let x = 5;", "let x = ;"),
-            ("let y = true;", "let y = ;"),
-            ("let foobar = 124214;", "let foobar = ;"),
+            ("let x = 5;", "let x = 5;"),
+            ("let y = true;", "let y = true;"),
+            ("let foobar = 124214;", "let foobar = 124214;"),
         ];
 
         apply_test(&test_case);
@@ -396,9 +388,9 @@ mod tests {
     #[test]
     fn test_return_statement() {
         let test_case = [
-            ("return 5;", "return;"),
-            ("return true;", "return;"),
-            ("return foobar;", "return;"),
+            ("return 5;", "return 5;"),
+            ("return true;", "return true;"),
+            ("return foobar;", "return foobar;"),
         ];
 
         apply_test(&test_case);

@@ -22,16 +22,16 @@ impl fmt::Display for Node {
 pub type Program = Vec<Statement>;
 
 pub enum Statement {
-    Let(String),
-    Return,
+    Let(String, Expression),
+    Return(Expression),
     Expr(Expression),
 }
 
 impl fmt::Display for Statement {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Statement::Let(id) => write!(f, "let {} = ;", id),
-            Statement::Return => write!(f, "return;"),
+            Statement::Let(id, expr) => write!(f, "let {} = {};", id, expr),
+            Statement::Return(expr) => write!(f, "return {};", expr),
             Statement::Expr(expr) => write!(f, "{}", expr),
         }
     }
