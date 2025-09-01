@@ -111,6 +111,8 @@ impl Parser {
         let mut left_expr = match self.current_token {
             Token::Ident(ref id) => Ok(Expression::Ident(id.clone())),
             Token::Integer(i) => Ok(Expression::Lit(Literal::Integer(i))),
+            Token::True => Ok(Expression::Lit(Literal::Boolean(true))),
+            Token::False => Ok(Expression::Lit(Literal::Boolean(false))),
             Token::Bang | Token::Dash => self.parse_prefix_expression(),
             _ => {
                 return Err(ParserError::new(format!(
@@ -290,10 +292,20 @@ mod tests {
     }
 
     #[test]
+    fn test_boolean_literal_expression() {
+        let test_case = [("true;", "true"), ("false;", "false")];
+        apply_test(&test_case);
+    }
+
+    #[test]
     fn test_prefix_expression() {
         let test_case = [
             ("!5;", "(!5)"),
             ("-15", "(-15)"),
+            ("!foobar;", "(!foobar)"),
+            ("-foobar;", "(-foobar)"),
+            ("!true;", "(!true)"),
+            ("!false;", "(!false)"),
         ];
 
         apply_test(&test_case);
@@ -310,8 +322,37 @@ mod tests {
             ("5 < 5;", "(5 < 5)"),
             ("5 == 5;", "(5 == 5)"),
             ("5 != 5;", "(5 != 5)"),
+            ("true == true", "(true == true)"),
+            ("true != false", "(true != false)"),
+            ("false == false", "(false == false)"),
         ];
 
+        apply_test(&test_case);
+    }
+
+    #[test]
+    fn test_operator_precedence() {
+        let test_case = [
+            ("-a * b", "((-a) * b)"),
+            ("!-a", "(!(-a))"),
+            ("a + b + c", "((a + b) + c)"),
+            ("a + b - c", "((a + b) - c)"),
+            ("a * b * c", "((a * b) * c)"),
+            ("a * b / c", "((a * b) / c)"),
+            ("a + b / c", "(a + (b / c))"),
+            ("a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"),
+            ("3 + 4; -5 * 5", "(3 + 4)((-5) * 5)"),
+            ("5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"),
+            ("5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"),
+            (
+                "3 + 4 * 5 == 3 * 1 + 4 * 5",
+                "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
+            ),
+            ("true", "true"),
+            ("false", "false"),
+            ("3 > 5 == false", "((3 > 5) == false)"),
+            ("3 < 5 == true", "((3 < 5) == true)"),
+        ];
         apply_test(&test_case);
     }
 }

@@ -66,12 +66,14 @@ impl fmt::Display for Expression {
 
 pub enum Literal {
     Integer(i32),
+    Boolean(bool),
 }
 
 impl fmt::Display for Literal {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Literal::Integer(i) => write!(f, "{}", i),
+            Literal::Boolean(b) => write!(f, "{}", b),
         }
     }
 }
