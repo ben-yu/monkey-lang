@@ -160,6 +160,11 @@ impl Parser {
                     let expr = left_expr.unwrap();
                     left_expr = self.parse_infix_expression(expr);
                 }
+                Token::LParen => {
+                    self.next_token();
+                    let expr = left_expr.unwrap();
+                    left_expr = self.parse_fn_call_expression(expr);
+                }
                 _ => return left_expr,
             }
         }
@@ -227,7 +232,7 @@ impl Parser {
 
         let body = self.parse_block_statement()?;
 
-        Ok(Expression::Fn(parameters, body))
+        Ok(Expression::Function(parameters, body))
     }
 
     fn parse_fn_parameters(&mut self) -> Result<Vec<String>, ParserError> {
@@ -258,6 +263,34 @@ impl Parser {
         self.expect_peek_token(&Token::RParen)?;
 
         Ok(identifiers)
+    }
+
+    fn parse_fn_call_expression(&mut self, expr: Expression) -> Result<Expression, ParserError> {
+        let arguments = self.parse_call_arguments()?;
+        Ok(Expression::FunctionCall(Box::new(expr), arguments))
+    }
+
+    fn parse_call_arguments(&mut self) -> Result<Vec<Expression>, ParserError> {
+        let mut list = Vec::new();
+
+        if self.peek_token_is(&Token::RParen) {
+            self.next_token();
+            return Ok(list);
+        }
+
+        self.next_token();
+
+        list.push(self.parse_expression(Precedence::Lowest)?);
+
+        while self.peek_token_is(&Token::Comma) {
+            self.next_token();
+            self.next_token();
+            list.push(self.parse_expression(Precedence::Lowest)?);
+        }
+
+        self.expect_peek_token(&Token::RParen)?;
+
+        Ok(list)
     }
 
     fn current_token_is(&self, token: &Token) -> bool {
@@ -331,6 +364,7 @@ pub fn token_to_precedence(token: &Token) -> Precedence {
         Token::Plus | Token::Dash => Precedence::Sum,
         Token::LessThan | Token::GreaterThan => Precedence::LessGreater,
         Token::Equal | Token::NotEqual => Precedence::Equals,
+        Token::LParen => Precedence::Call,
         _ => Precedence::Lowest,
     }
 }
@@ -474,6 +508,12 @@ mod tests {
             ("fn(x) {};", "fn(x) {...}"),
             ("fn(x, y, z) {};", "fn(x, y, z) {...}"),
         ];
+        apply_test(&test_case);
+    }
+
+    #[test]
+    fn test_fn_call_expression() {
+        let test_case = [("add(1, 2 * 3, 4 + 5);", "add(1, (2 * 3), (4 + 5))")];
         apply_test(&test_case);
     }
 }

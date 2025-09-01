@@ -53,8 +53,8 @@ pub enum Expression {
     Prefix(Token, Box<Expression>),
     Infix(Token, Box<Expression>, Box<Expression>),
     If(Box<Expression>, BlockStatement, Option<BlockStatement>),
-    Fn(Vec<String>, BlockStatement),
-
+    Function(Vec<String>, BlockStatement),
+    FunctionCall(Box<Expression>, Vec<Expression>),
 }
 
 impl fmt::Display for Expression {
@@ -77,9 +77,20 @@ impl fmt::Display for Expression {
                     write!(f, "if {} {{ {} }}", cond, format_statements(true_block))
                 }
             },
-            Expression::Fn(params, _block) => write!(f, "fn({}) {{...}}", params.join(", "),)
+            Expression::Function(params, _block) => write!(f, "fn({}) {{...}}", params.join(", "),),
+            Expression::FunctionCall(fn_expr, args) => {
+                write!(f, "{}({})", fn_expr, format_expressions(args))
+            }
         }
     }
+}
+
+fn format_expressions(expressions: &[Expression]) -> String {
+    expressions
+        .iter()
+        .map(|stmt| stmt.to_string())
+        .collect::<Vec<String>>()
+        .join(", ")
 }
 
 pub enum Literal {
