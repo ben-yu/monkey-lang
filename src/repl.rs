@@ -3,6 +3,19 @@ use crate::lexer::Lexer;
 use crate::parser::*;
 use std::io::Write;
 
+const MONKEY_FACE: &str = r#"            __,__
+   .--.  .-"     "-.  .--.
+  / .. \/  .-. .-.  \/ .. \
+ | |  '|  /   Y   \  |'  | |
+ | \   \  \ 0 | 0 /  /   / |
+  \ '- ,\.-"""""""-./, -' /
+   ''-' /_   ^ ^   _\ '-''
+       |  \._   _./  |
+       \   \ '~' /   /
+        '._ '-=-' _.'
+           '-----'
+"#;
+
 pub fn start() {
 
     print!(">> ");
@@ -11,7 +24,12 @@ pub fn start() {
         if let Ok(line) = line {
             match parse(&line) {
                 Ok(node) => println!("{}", node),
-                Err(e) => panic!("Parsing Error: {:#?}", e),
+                Err(errors) => {
+                    eprintln!("{}", MONKEY_FACE);
+                    for e in errors {
+                        eprintln!("{}", e);
+                    }
+                }
             }
         }
         print!(">> ");
