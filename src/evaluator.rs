@@ -59,7 +59,12 @@ fn eval_expression(expr: &Expression) -> Result<Object, EvalError> {
         Expression::Prefix(op, expr) => {
             let right = eval_expression(expr)?;
             eval_prefix_expression(op, &right)
-        }
+        },
+        Expression::Infix(op, left, right) => {
+            let left = eval_expression(left)?;
+            let right = eval_expression(right)?;
+            eval_infix_expression(op, &left, &right)
+        },
         _ => Err(EvalError::new(format!(
             "unknown expression: {}",
             expr
@@ -76,6 +81,57 @@ fn eval_prefix_expression(op: &Token, expr: &Object) -> Result<Object, EvalError
             op, expr
         ))),
     }
+}
+
+fn eval_infix_expression(op: &Token, left: &Object, right: &Object) -> Result<Object, EvalError> {
+    match (&*left, &*right) {
+        (Object::Integer(left_val), Object::Integer(right_val)) => {
+            eval_integer_infix_expression(op, *left_val, *right_val)
+        }
+        (Object::Boolean(left_val), Object::Boolean(right_val)) => {
+            eval_boolean_infix_expression(op, *left_val, *right_val)
+        }
+        _ => Err(EvalError::new(format!(
+            "type mismatch: {} {} {}",
+            left, op, right
+        ))),
+    }
+}
+
+fn eval_integer_infix_expression(op: &Token, left_val: i32, right_val: i32) -> Result<Object, EvalError> {
+    let result = match op {
+        Token::Plus => Object::Integer(left_val + right_val),
+        Token::Dash => Object::Integer(left_val - right_val),
+        Token::Asterisk => Object::Integer(left_val * right_val),
+        Token::ForwardSlash => Object::Integer(left_val / right_val),
+        Token::LessThan => Object::Boolean(left_val < right_val),
+        Token::GreaterThan => Object::Boolean(left_val > right_val),
+        Token::Equal => Object::Boolean(left_val == right_val),
+        Token::NotEqual => Object::Boolean(left_val != right_val),
+        op => {
+            return Err(EvalError::new(format!(
+                "unknown operator: {} {} {}",
+                left_val, op, right_val
+            )))
+        }
+    };
+
+    Ok(result)
+}
+
+fn eval_boolean_infix_expression(op: &Token, left_val: bool, right_val: bool) -> Result<Object, EvalError> {
+    let result = match op {
+        Token::Equal => Object::Boolean(left_val == right_val),
+        Token::NotEqual => Object::Boolean(left_val != right_val),
+        op => {
+            return Err(EvalError::new(format!(
+                "unknown operator: {} {} {}",
+                left_val, op, right_val
+            )))
+        }
+    };
+
+    Ok(result)
 }
 
 fn eval_bang_operator(expr: &Object) -> Result<Object, EvalError> {
@@ -129,6 +185,17 @@ mod tests {
             ("10", "10"),
             ("-5", "-5"),
             ("-10", "-10"),
+            ("5 + 5 + 5 + 5 - 10", "10"),
+            ("2 * 2 * 2 * 2 * 2", "32"),
+            ("-50 + 100 + -50", "0"),
+            ("5 * 2 + 10", "20"),
+            ("5 + 2 * 10", "25"),
+            ("20 + 2 * -10", "0"),
+            ("50 / 2 * 2 + 10", "60"),
+            ("2 * (5 + 10)", "30"),
+            ("3 * 3 * 3 + 10", "37"),
+            ("3 * (3 * 3) + 10", "37"),
+            ("(5 + 10 * 2 + 15 / 3) * 2 + -10", "50"),
         ];
 
         apply_test(&test_case);
@@ -139,6 +206,23 @@ mod tests {
         let test_case = [
             ("true", "true"),
             ("false", "false"),
+            ("1 < 2", "true"),
+            ("1 > 2", "false"),
+            ("1 < 1", "false"),
+            ("1 > 1", "false"),
+            ("1 == 1", "true"),
+            ("1 != 1", "false"),
+            ("1 == 2", "false"),
+            ("1 != 2", "true"),
+            ("true == true", "true"),
+            ("false == false", "true"),
+            ("true == false", "false"),
+            ("true != false", "true"),
+            ("false != true", "true"),
+            ("(1 < 2) == true", "true"),
+            ("(1 < 2) == false", "false"),
+            ("(1 > 2) == true", "false"),
+            ("(1 > 2) == false", "true"),
         ];
 
         apply_test(&test_case);
