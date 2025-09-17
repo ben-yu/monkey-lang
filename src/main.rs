@@ -3,6 +3,8 @@ mod lexer;
 mod repl;
 mod ast;
 mod parser;
+mod object;
+mod evaluator;
 
 fn main() {
     println!("This is the Monkey programming language!");
