@@ -20,7 +20,6 @@ impl EvalError {
 
 
 pub fn eval(node: Node) -> Result<Object, EvalError> {
-    println!("{:?}", node);
     match node {
         Node::Program(program) => eval_program(&program),
         Node::Expr(expr) => eval_expression(&expr),
@@ -57,6 +56,10 @@ fn eval_statement(stmt: &Statement) -> Result<Object, EvalError> {
 fn eval_expression(expr: &Expression) -> Result<Object, EvalError> {
     match expr {
         Expression::Lit(lit) => eval_literal(lit),
+        Expression::Prefix(op, expr) => {
+            let right = eval_expression(expr)?;
+            eval_prefix_expression(op, &right)
+        }
         _ => Err(EvalError::new(format!(
             "unknown expression: {}",
             expr
@@ -64,13 +67,40 @@ fn eval_expression(expr: &Expression) -> Result<Object, EvalError> {
     }
 }
 
+fn eval_prefix_expression(op: &Token, expr: &Object) -> Result<Object, EvalError> {
+    match op {
+        Token::Bang => eval_bang_operator(expr),
+        Token::Dash => eval_minus_prefix_operator(expr),
+        _ => Err(EvalError::new(format!(
+            "unknown operator: {}{}",
+            op, expr
+        ))),
+    }
+}
+
+fn eval_bang_operator(expr: &Object) -> Result<Object, EvalError> {
+    match *expr {
+        Object::Boolean(b) => Ok(Object::Boolean(!b)),
+        Object::Null => Ok(Object::Boolean(true)),
+        _ => Ok(Object::Boolean(false)),
+    }
+}
+
+fn eval_minus_prefix_operator(expr: &Object) -> Result<Object, EvalError> {
+    match *expr {
+        Object::Integer(b) => Ok(Object::Integer(-b)),
+        _ => Err(EvalError::new(format!(
+            "unknown operator: -{}",
+            expr
+        ))),
+    }
+}
+
+
 fn eval_literal(lit: &Literal) -> Result<Object, EvalError> {
     match lit {
         Literal::Integer(i) => Ok(Object::Integer(*i)),
-        _ => Err(EvalError::new(format!(
-            "unknown literal: {}",
-            lit
-        ))),
+        Literal::Boolean(b) => Ok(Object::Boolean(*b)),
     }
 }
 
@@ -97,8 +127,33 @@ mod tests {
         let test_case = [
             ("5", "5"),
             ("10", "10"),
+            ("-5", "-5"),
+            ("-10", "-10"),
         ];
 
+        apply_test(&test_case);
+    }
+
+    #[test]
+    fn test_boolean_expressions() {
+        let test_case = [
+            ("true", "true"),
+            ("false", "false"),
+        ];
+
+        apply_test(&test_case);
+    }
+
+    #[test]
+    fn test_bang_operator() {
+        let test_case = [
+            ("!true", "false"),
+            ("!false", "true"),
+            ("!5", "false"),
+            ("!!true", "true"),
+            ("!!false", "false"),
+            ("!!5", "true"),
+        ];
         apply_test(&test_case);
     }
 
