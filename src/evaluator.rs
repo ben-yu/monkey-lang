@@ -18,6 +18,13 @@ impl EvalError {
     }
 }
 
+fn is_truthy(obj: &Object) -> bool {
+    match *obj {
+        Object::Null => false,
+        Object::Boolean(false) => false,
+        _ => true,
+    }
+}
 
 pub fn eval(node: Node) -> Result<Object, EvalError> {
     match node {
@@ -35,6 +42,16 @@ fn eval_program(program: &[Statement]) -> Result<Object, EvalError> {
     let mut result = Object::Null;
 
     for stmt in program {
+        result = eval_statement(stmt)?;
+    }
+
+    Ok(result)
+}
+
+fn eval_block_statement(stmts: &[Statement]) -> Result<Object, EvalError> {
+    let mut result = Object::Null;
+
+    for stmt in stmts {
         result = eval_statement(stmt)?;
     }
 
@@ -65,6 +82,18 @@ fn eval_expression(expr: &Expression) -> Result<Object, EvalError> {
             let right = eval_expression(right)?;
             eval_infix_expression(op, &left, &right)
         },
+        Expression::If(condition, consequence, alternative) => {
+            let condition = eval_expression(condition)?;
+
+            if is_truthy(&condition) {
+                eval_block_statement(consequence)
+            } else {
+                match alternative {
+                    Some(alt) => eval_block_statement(alt),
+                    None => Ok(Object::Null),
+                }
+            }
+        }
         _ => Err(EvalError::new(format!(
             "unknown expression: {}",
             expr
@@ -237,6 +266,20 @@ mod tests {
             ("!!true", "true"),
             ("!!false", "false"),
             ("!!5", "true"),
+        ];
+        apply_test(&test_case);
+    }
+
+    #[test]
+    fn test_if_else_expressions() {
+        let test_case = [
+            ("if (true) { 10 }", "10"),
+            ("if (false) { 10 }", "null"),
+            ("if (1) { 10 }", "10"),
+            ("if (1 < 2) { 10 }", "10"),
+            ("if (1 > 2) { 10 }", "null"),
+            ("if (1 > 2) { 10 } else { 20 }", "20"),
+            ("if (1 < 2) { 10 } else { 20 }", "10"),
         ];
         apply_test(&test_case);
     }
