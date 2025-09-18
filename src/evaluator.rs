@@ -42,7 +42,12 @@ fn eval_program(program: &[Statement]) -> Result<Object, EvalError> {
     let mut result = Object::Null;
 
     for stmt in program {
-        result = eval_statement(stmt)?;
+        let val = eval_statement(stmt)?;
+
+        match val {
+            Object::ReturnValue(_) => return Ok(val),
+            _ => result = val,
+        }
     }
 
     Ok(result)
@@ -52,7 +57,12 @@ fn eval_block_statement(stmts: &[Statement]) -> Result<Object, EvalError> {
     let mut result = Object::Null;
 
     for stmt in stmts {
-        result = eval_statement(stmt)?;
+        let val = eval_statement(stmt)?;
+
+        match val {
+            Object::ReturnValue(_) => return Ok(val),
+            _ => result = val,
+        }
     }
 
     Ok(result)
@@ -61,6 +71,10 @@ fn eval_block_statement(stmts: &[Statement]) -> Result<Object, EvalError> {
 fn eval_statement(stmt: &Statement) -> Result<Object, EvalError> {
     match stmt {
         Statement::Expr(expr) => eval_expression(expr),
+        Statement::Return(expr) => {
+            let val = eval_expression(expr)?;
+            Ok(Object::ReturnValue(val.into()))
+        }
         _ => Err(EvalError::new(format!(
             "unknown statement: {}",
             stmt
@@ -284,6 +298,45 @@ mod tests {
         apply_test(&test_case);
     }
 
+    #[test]
+    fn test_return_statements() {
+        let test_case = [
+            ("return 10;", "10"),
+            ("return 10; 9;", "10"),
+            ("return 2 * 5; 9;", "10"),
+            ("9; return 2 * 5; 9;", "10"),
+            (
+                "if (10 > 1) { \
+                 if (10 > 1) { \
+                 return 10; \
+                 } \
+                 return 1; \
+                 }",
+                "10",
+            ),
+        ];
+        apply_test(&test_case);
+    }
+
+    #[test]
+    fn test_error_handling() {
+        let test_case = [
+            ("5 + true;", "type mismatch: 5 + true"),
+            ("5 + true; 5;", "type mismatch: 5 + true"),
+            ("-true", "unknown operator: -true"),
+            ("true + false;", "unknown operator: true + false"),
+            (
+                "true + false + true + false;",
+                "unknown operator: true + false",
+            ),
+            ("5; true + false; 5", "unknown operator: true + false"),
+            (
+                "if (10 > 1) { true + false; )",
+                "unknown operator: true + false",
+            ),
+        ];
+        apply_test(&test_case);
+    }
 }
 
 
