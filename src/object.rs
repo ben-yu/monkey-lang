@@ -1,6 +1,7 @@
 use std::fmt;
 use std::rc::Rc;
 
+#[derive(Debug, Clone)]
 pub enum Object {
     Integer(i32),
     Boolean(bool),

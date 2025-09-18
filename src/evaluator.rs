@@ -2,6 +2,9 @@ use std::fmt;
 use crate::ast::*;
 use crate::object::*;
 use crate::token::*;
+use crate::environment::*;
+use std::rc::Rc;
+
 
 #[derive(Debug, Clone)]
 pub struct EvalError(String);
@@ -26,23 +29,19 @@ fn is_truthy(obj: &Object) -> bool {
     }
 }
 
-pub fn eval(node: Node) -> Result<Object, EvalError> {
+pub fn eval(node: Node, env: &Env) -> Result<Object, EvalError> {
     match node {
-        Node::Program(program) => eval_program(&program),
-        Node::Expr(expr) => eval_expression(&expr),
-        _ => Err(EvalError::new(format!(
-            "unknown node: {}",
-            node
-        ))),
-
+        Node::Program(program) => eval_program(&program, env),
+        Node::Stmt(stmt) => eval_statement(&stmt, env),
+        Node::Expr(expr) => eval_expression(&expr, env),
     }
 }
 
-fn eval_program(program: &[Statement]) -> Result<Object, EvalError> {
+fn eval_program(program: &[Statement], env: &Env) -> Result<Object, EvalError> {
     let mut result = Object::Null;
 
     for stmt in program {
-        let val = eval_statement(stmt)?;
+        let val = eval_statement(stmt, &Rc::clone(env))?;
 
         match val {
             Object::ReturnValue(_) => return Ok(val),
@@ -53,11 +52,11 @@ fn eval_program(program: &[Statement]) -> Result<Object, EvalError> {
     Ok(result)
 }
 
-fn eval_block_statement(stmts: &[Statement]) -> Result<Object, EvalError> {
+fn eval_block_statement(stmts: &[Statement], env: &Env) -> Result<Object, EvalError> {
     let mut result = Object::Null;
 
     for stmt in stmts {
-        let val = eval_statement(stmt)?;
+        let val = eval_statement(stmt, &Rc::clone(env))?;
 
         match val {
             Object::ReturnValue(_) => return Ok(val),
@@ -68,42 +67,45 @@ fn eval_block_statement(stmts: &[Statement]) -> Result<Object, EvalError> {
     Ok(result)
 }
 
-fn eval_statement(stmt: &Statement) -> Result<Object, EvalError> {
+fn eval_statement(stmt: &Statement, env: &Env) -> Result<Object, EvalError> {
     match stmt {
-        Statement::Expr(expr) => eval_expression(expr),
+        Statement::Let(id, expr) => {
+            let val = eval_expression(expr, &Rc::clone(env))?;
+            let obj = Rc::new(val.clone());
+            env.borrow_mut().set(id.clone(), obj);
+            Ok(val)
+        }
+        Statement::Expr(expr) => eval_expression(expr, env),
         Statement::Return(expr) => {
-            let val = eval_expression(expr)?;
+            let val = eval_expression(expr, env)?;
             Ok(Object::ReturnValue(val.into()))
         }
-        _ => Err(EvalError::new(format!(
-            "unknown statement: {}",
-            stmt
-        ))),
 
     }
 }
 
 
-fn eval_expression(expr: &Expression) -> Result<Object, EvalError> {
+fn eval_expression(expr: &Expression, env: &Env) -> Result<Object, EvalError> {
     match expr {
+        Expression::Ident(id) => eval_identifier(&id, env),
         Expression::Lit(lit) => eval_literal(lit),
         Expression::Prefix(op, expr) => {
-            let right = eval_expression(expr)?;
+            let right = eval_expression(expr, env)?;
             eval_prefix_expression(op, &right)
         },
         Expression::Infix(op, left, right) => {
-            let left = eval_expression(left)?;
-            let right = eval_expression(right)?;
+            let left = eval_expression(left, &Rc::clone(env))?;
+            let right = eval_expression(right, &Rc::clone(env))?;
             eval_infix_expression(op, &left, &right)
         },
         Expression::If(condition, consequence, alternative) => {
-            let condition = eval_expression(condition)?;
+            let condition = eval_expression(condition, &Rc::clone(env))?;
 
             if is_truthy(&condition) {
-                eval_block_statement(consequence)
+                eval_block_statement(consequence, env)
             } else {
                 match alternative {
-                    Some(alt) => eval_block_statement(alt),
+                    Some(alt) => eval_block_statement(alt, env),
                     None => Ok(Object::Null),
                 }
             }
@@ -195,6 +197,13 @@ fn eval_minus_prefix_operator(expr: &Object) -> Result<Object, EvalError> {
     }
 }
 
+fn eval_identifier(id: &str, env: &Env) -> Result<Object, EvalError> {
+    match env.borrow().get(id) {
+        Some(obj) => Ok((*obj).clone()),
+        None => Err(EvalError::new(format!("identifier not found: {}", id))),
+    }
+}
+
 
 fn eval_literal(lit: &Literal) -> Result<Object, EvalError> {
     match lit {
@@ -210,9 +219,11 @@ mod tests {
     use crate::parser::*;
 
     fn apply_test(test_case: &[(&str, &str)]) {
+        let env: Env = Rc::new(Default::default());
+
         for (input, expected) in test_case {
             match parse(input) {
-                Ok(node) => match eval(node) {
+                Ok(node) => match eval(node, &Rc::clone(&env)) {
                     Ok(eval_result) => assert_eq!(expected, &format!("{}", eval_result)),
                     Err(err) => assert_eq!(expected, &format!("{}", err)),
                 },
@@ -334,6 +345,17 @@ mod tests {
                 "if (10 > 1) { true + false; )",
                 "unknown operator: true + false",
             ),
+        ];
+        apply_test(&test_case);
+    }
+
+    #[test]
+    fn test_let_statements() {
+        let test_case = [
+            ("let a = 5; a;", "5"),
+            ("let a = 5 * 5; a;", "25"),
+            ("let a = 5; let b = a; b;", "5"),
+            ("let a = 5; let b = a; let c = a + b + 5; c;", "15"),
         ];
         apply_test(&test_case);
     }
