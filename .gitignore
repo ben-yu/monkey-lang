@@ -1,1 +1,22 @@
-/target
+# Rust
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# WASM build artifacts
+/docs/pkg/
+/web/pkg/
+*.wasm
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local development
+node_modules/

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Monkey Language Interpreter</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+        }
+        h1 {
+            color: #569cd6;
+            text-align: center;
+        }
+        .repl-container {
+            border: 1px solid #444;
+            border-radius: 8px;
+            background-color: #252526;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .output {
+            min-height: 200px;
+            background-color: #1e1e1e;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-size: 14px;
+        }
+        .input-container {
+            display: flex;
+            align-items: center;
+        }
+        .prompt {
+            color: #569cd6;
+            margin-right: 10px;
+        }
+        input[type="text"] {
+            flex: 1;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 8px;
+            font-family: inherit;
+            font-size: 14px;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #569cd6;
+        }
+        .buttons {
+            margin-top: 10px;
+            text-align: center;
+        }
+        button {
+            background-color: #0e639c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 16px;
+            margin: 0 5px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        button:hover {
+            background-color: #1177bb;
+        }
+        .examples {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #252526;
+            border-radius: 8px;
+        }
+        .examples h3 {
+            color: #569cd6;
+            margin-top: 0;
+        }
+        .examples pre {
+            background-color: #1e1e1e;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            overflow-x: auto;
+        }
+        .loading {
+            text-align: center;
+            color: #569cd6;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🐒 Monkey Language Interpreter</h1>
+    
+    <div id="loading" class="loading">
+        Loading WebAssembly module...
+    </div>
+
+    <div id="repl" class="repl-container" style="display: none;">
+        <div id="output" class="output">Welcome to the Monkey programming language REPL!
+Type your expressions below and press Enter to evaluate them.
+
+</div>
+        <div class="input-container">
+            <span class="prompt">>></span>
+            <input type="text" id="input" placeholder="Enter Monkey code here...">
+        </div>
+        <div class="buttons">
+            <button onclick="clearOutput()">Clear</button>
+            <button onclick="resetInterpreter()">Reset Environment</button>
+        </div>
+    </div>
+
+    <div class="examples">
+        <h3>Examples to try:</h3>
+        <pre>5 + 5
+let x = 10;
+let add = fn(a, b) { a + b };
+add(5, 5);</pre>
+    </div>
+
+    <script type="module">
+        import init, { MonkeyInterpreter } from './pkg/monkey_lang.js';
+        
+        let interpreter;
+        
+        async function run() {
+            try {
+                await init();
+                interpreter = new MonkeyInterpreter();
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('repl').style.display = 'block';
+                
+                setupEventListeners();
+                document.getElementById('input').focus();
+            } catch (err) {
+                document.getElementById('loading').textContent = 'Error loading WASM: ' + err;
+            }
+        }
+        
+        function setupEventListeners() {
+            const input = document.getElementById('input');
+            const output = document.getElementById('output');
+            
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    const code = input.value.trim();
+                    if (code) {
+                        // Display the input
+                        output.textContent += `>> ${code}\n`;
+                        
+                        // Evaluate and display result
+                        try {
+                            const result = interpreter.eval(code);
+                            output.textContent += `${result}\n\n`;
+                        } catch (err) {
+                            output.textContent += `Error: ${err}\n\n`;
+                        }
+                        
+                        // Clear input and scroll to bottom
+                        input.value = '';
+                        output.scrollTop = output.scrollHeight;
+                    }
+                }
+            });
+        }
+        
+        window.clearOutput = function() {
+            document.getElementById('output').textContent = 'Welcome to the Monkey programming language REPL!\nType your expressions below and press Enter to evaluate them.\n\n';
+        };
+        
+        window.resetInterpreter = function() {
+            if (interpreter) {
+                interpreter.reset();
+                document.getElementById('output').textContent += '--- Environment Reset ---\n\n';
+                document.getElementById('output').scrollTop = document.getElementById('output').scrollHeight;
+            }
+        };
+        
+        run();
+    </script>
+</body>
+</html>
