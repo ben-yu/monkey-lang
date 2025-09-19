@@ -21,7 +21,7 @@ impl fmt::Display for Node {
 
 pub type Program = Vec<Statement>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Statement {
     Let(String, Expression),
     Return(Expression),
@@ -48,7 +48,7 @@ fn format_statements(stmts: &[Statement]) -> String {
 
 pub type BlockStatement = Vec<Statement>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Expression {
     Ident(String),
     Lit(Literal),
@@ -95,7 +95,7 @@ fn format_expressions(expressions: &[Expression]) -> String {
         .join(", ")
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Literal {
     Integer(i32),
     Boolean(bool),

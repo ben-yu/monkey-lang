@@ -1,3 +1,5 @@
+use crate::ast::*;
+use crate::environment::*;
 use std::fmt;
 use std::rc::Rc;
 
@@ -7,6 +9,7 @@ pub enum Object {
     Boolean(bool),
     Null,
     ReturnValue(Rc<Object>),
+    Function(Vec<String>, BlockStatement, Env)
 }
 
 impl fmt::Display for Object {
@@ -16,6 +19,11 @@ impl fmt::Display for Object {
             Object::Boolean(b) => write!(f, "{}", b),
             Object::Null => write!(f, "null"),
             Object::ReturnValue(obj) => write!(f, "{}", obj),
+            Object::Function(params, _body, _env) => {
+                let params = params.join(",");
+                write!(f, "fn({}) {{...}}", params,)
+            }
+
         }
     }
 }

@@ -4,6 +4,7 @@ use crate::object::*;
 use crate::token::*;
 use crate::environment::*;
 use std::rc::Rc;
+use std::cell::RefCell;
 
 
 #[derive(Debug, Clone)]
@@ -109,6 +110,16 @@ fn eval_expression(expr: &Expression, env: &Env) -> Result<Object, EvalError> {
                     None => Ok(Object::Null),
                 }
             }
+        },
+        Expression::Function(params, body) => Ok(Object::Function(
+            params.clone(),
+            body.clone(),
+            Rc::clone(&env),
+        )),
+        Expression::FunctionCall(func, args) => {
+            let func = eval_expression(func, &Rc::clone(env))?;
+            let args: Result<Vec<Object>, EvalError> = args.iter().map(|arg| eval_expression(arg, env)).collect();
+            apply_function(&func, &args?)
         }
         _ => Err(EvalError::new(format!(
             "unknown expression: {}",
@@ -177,6 +188,38 @@ fn eval_boolean_infix_expression(op: &Token, left_val: bool, right_val: bool) ->
     };
 
     Ok(result)
+}
+
+fn apply_function(function: &Object, args: &[Object]) -> Result<Object, EvalError> {
+    match function {
+        Object::Function(params, body, env) => {
+            let mut env = Environment::new_enclosed_environment(env);
+
+            if params.len() != args.len() {
+                return Err(EvalError::new(format!(
+                    "invalid number of arguments: exected={}, got={}",
+                    params.len(),
+                    args.len()
+                )));
+            }
+
+            params.iter().enumerate().for_each(|(i, param)| {
+                env.set(param.clone(), Rc::new(args[i].clone()));
+            });
+
+            let evaluated = eval_block_statement(&body, &Rc::new(RefCell::new(env)))?;
+            unwrap_return_value(Rc::new(evaluated))
+        }
+        f => Err(EvalError::new(format!("not a function: {}", f))),
+    }
+}
+
+fn unwrap_return_value(obj: Rc<Object>) -> Result<Object, EvalError> {
+    if let Object::ReturnValue(val) = &*obj {
+        Ok((**val).clone())
+    } else {
+        Ok((*obj).clone())
+    }
 }
 
 fn eval_bang_operator(expr: &Object) -> Result<Object, EvalError> {
@@ -357,6 +400,57 @@ mod tests {
             ("let a = 5; let b = a; b;", "5"),
             ("let a = 5; let b = a; let c = a + b + 5; c;", "15"),
         ];
+        apply_test(&test_case);
+    }
+
+    #[test]
+    fn test_function_object() {
+        let test_case = [("fn(x) { x + 2; };", "fn(x) {...}")];
+        apply_test(&test_case);
+    }
+
+    #[test]
+    fn test_function_application() {
+        let test_case = [
+            ("let identity = fn(x) { x; }; identity(5);", "5"),
+            ("let identity = fn(x) { return x; }; identity(5);", "5"),
+            ("let double = fn(x) { x * 2; }; double(5);", "10"),
+            ("let add = fn(x, y) { x + y; }; add(5, 5);", "10"),
+            (
+                "let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));",
+                "20",
+            ),
+            ("fn(x) { x; }(5)", "5"),
+        ];
+        apply_test(&test_case);
+    }
+
+    #[test]
+    fn test_enclosing_environment() {
+        let test_case = [(
+            "let first = 10; \
+             let second = 10; \
+             let third = 10; \
+             let ourFunction = fn(first) { \
+             let second = 20; \
+             first + second + third; \
+             }; \
+             ourFunction(20) + first + second;",
+            "70",
+        )];
+        apply_test(&test_case);
+    }
+
+    #[test]
+    fn test_closure() {
+        let test_case = [(
+            "let newAdder = fn(x) { \
+             fn(y) { x + y }; \
+             }; \
+             let addTwo = newAdder(2); \
+             addTwo(2);",
+            "4",
+        )];
         apply_test(&test_case);
     }
 }
