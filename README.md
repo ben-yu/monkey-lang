@@ -4,8 +4,7 @@ A Rust implementation of the Monkey programming language from the book "Writing 
 
 ## 🌐 Try it Online
 
-**Live Demo:** [https://YOUR_USERNAME.github.io/monkey-lang](https://YOUR_USERNAME.github.io/monkey-lang)
-
+**Live Demo:** https://toil.ing/monkey-lang/
 The interpreter runs entirely in your browser using WebAssembly!
 
 ## Features
